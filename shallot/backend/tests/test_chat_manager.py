@@ -16,10 +16,25 @@ def await_mock(return_value):
 def chat_manager():
     """Create a chat manager for testing."""
     with patch('app.core.chat_manager.get_chat_service') as mock_get_service:
-        # Mock service instances
+        # Mock service instances with async methods
         mock_discord = MagicMock()
+        mock_discord.send_message = AsyncMock(return_value=True)
+        mock_discord.send_file = AsyncMock(return_value=True)
+        mock_discord.format_message = AsyncMock(return_value="Formatted")
+        mock_discord.validate_user_id = AsyncMock(return_value=True)
+        mock_discord.get_display_name = AsyncMock(return_value="Discord User")
         mock_slack = MagicMock()
+        mock_slack.send_message = AsyncMock(return_value=True)
+        mock_slack.send_file = AsyncMock(return_value=True)
+        mock_slack.format_message = AsyncMock(return_value="Formatted")
+        mock_slack.validate_user_id = AsyncMock(return_value=True)
+        mock_slack.get_display_name = AsyncMock(return_value="Slack User")
         mock_matrix = MagicMock()
+        mock_matrix.send_message = AsyncMock(return_value=True)
+        mock_matrix.send_file = AsyncMock(return_value=True)
+        mock_matrix.format_message = AsyncMock(return_value="Formatted")
+        mock_matrix.validate_user_id = AsyncMock(return_value=True)
+        mock_matrix.get_display_name = AsyncMock(return_value="Matrix User")
         
         # Configure the mock_get_service to return different mocks based on the input
         def get_service_side_effect(service):

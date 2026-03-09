@@ -28,7 +28,6 @@ from app.core.permissions import CommandPermission
 client = TestClient(app)
 
 
-@pytest.fixture
 def await_mock(return_value):
     """Helper function to make mock return values awaitable in Python 3.13."""
     async def _awaitable():

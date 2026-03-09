@@ -16,6 +16,7 @@ def await_mock(return_value):
         return return_value
     return _awaitable()
 
+@pytest.fixture
 def matrix_client():
     """Create MatrixClient instance for testing."""
     return MatrixClient()

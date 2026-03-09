@@ -3,7 +3,7 @@
 # https://securityonion.net/license; you may not use this file except in compliance with the
 # Elastic License 2.0.
 
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, session
 import logging
 from src.template_filters import nl2br, format_timestamp
 from src.config import Config
@@ -58,11 +58,19 @@ def create_app():
     def internal_error(error):
         return render_template('errors/500.html'), 500
         
+    # Ensure Vary: Cookie header is set when session is accessed
+    # to prevent proxy caches from serving one user's session to another
+    @app.after_request
+    def add_vary_cookie_header(response):
+        if 'Cookie' not in response.vary:
+            response.vary.add('Cookie')
+        return response
+
     # Redirect index to alerts page
     @app.route('/')
     def index():
         return redirect(url_for('alerts.list_alerts'))
-        
+
     return app
 
 if __name__ == '__main__':

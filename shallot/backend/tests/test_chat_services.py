@@ -20,6 +20,10 @@ def mock_discord_client():
     client = MagicMock()
     client.client = MagicMock()
     client.client.is_ready.return_value = True
+    # Make channel.send async since it's awaited
+    mock_channel = MagicMock()
+    mock_channel.send = AsyncMock()
+    client.client.get_channel.return_value = mock_channel
     client.send_message = AsyncMock(return_value=True)
     client._alert_channel_id = "12345"
     return client
@@ -30,6 +34,8 @@ def mock_slack_client():
     """Create a mock Slack client."""
     client = MagicMock()
     client.client = MagicMock()
+    # Make chat_postMessage async since it's awaited
+    client.client.chat_postMessage = AsyncMock()
     client.get_user_info = AsyncMock(return_value={
         "real_name": "Test User",
         "profile": {
@@ -49,6 +55,8 @@ def mock_matrix_client():
     client = MagicMock()
     client._enabled = True
     client.client = MagicMock()
+    # Make room_send async since it's awaited
+    client.client.room_send = AsyncMock(return_value=MagicMock())
     client.send_message = AsyncMock(return_value=True)
     client.upload_file = AsyncMock(return_value=("mxc://test/file", None))
     client.join_room = AsyncMock(return_value=True)

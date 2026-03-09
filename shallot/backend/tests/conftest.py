@@ -68,17 +68,15 @@ async def setup_database():
 
 @pytest.fixture
 async def db():
-    """Get a test database session."""
+    """Get a test database session with per-test isolation."""
     async with TestingSessionLocal() as session:
-        # Start a transaction
-        async with session.begin():
-            # Use nested transaction for tests
-            try:
-                yield session
-                # The transaction will be committed when the session.begin() context exits
-            except Exception:
-                # Rollback happens automatically on exception in the session.begin() context
-                raise
+        yield session
+        await session.rollback()
+    # Clean up all data after each test for isolation
+    async with TestingSessionLocal() as cleanup:
+        for table in reversed(Base.metadata.sorted_tables):
+            await cleanup.execute(table.delete())
+        await cleanup.commit()
 
 @pytest.fixture
 def override_get_db():

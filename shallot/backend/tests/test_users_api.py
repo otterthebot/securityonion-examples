@@ -66,99 +66,77 @@ def mock_superuser():
 # Service tests
 
 @pytest.mark.asyncio
-async def test_get_user_count(db):
+async def test_get_user_count(mock_db):
     """Test get_user_count service function."""
     # Mock DB query result
     mock_result = MagicMock()
-    mock_result.scalar_one = MagicMock(return_value=5)
-    
-    # Make scalar_one return value awaitable for Python 3.13
-    mock_result.scalar_one.return_value = await_mock(mock_result.scalar_one.return_value)
-    
-    # Make execute return an awaitable that resolves to mock_result
-    db.execute.return_value = mock_result
-    db.execute.return_value = await_mock(db.execute.return_value)
-    
+    mock_result.scalar_one.return_value = 5
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
     # Test function
-    count = await get_user_count(db)
-    
+    count = await get_user_count(mock_db)
+
     # Verify
     assert count == 5
-    db.execute.assert_called_once()
+    mock_db.execute.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_get_user_by_username(db, mock_user):
+async def test_get_user_by_username(mock_db, mock_user):
     """Test get_user_by_username service function."""
     # Mock DB query result
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_user
-    
-    # Make scalar_one_or_none awaitable
-    make_mock_awaitable(mock_result, "scalar_one_or_none")
-    
-    # Make execute awaitable and return mock_result
-    db.execute.return_value = mock_result
-    make_mock_awaitable(db, "execute")
-    
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
     # Test function
-    user = await get_user_by_username(db, "testuser")
-    
+    user = await get_user_by_username(mock_db, "testuser")
+
     # Verify
     assert user == mock_user
-    db.execute.assert_called_once()
+    mock_db.execute.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_get_user_by_username_not_found(db):
+async def test_get_user_by_username_not_found(mock_db):
     """Test get_user_by_username with nonexistent user."""
     # Mock DB query result
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None
-    
-    # Make scalar_one_or_none awaitable
-    make_mock_awaitable(mock_result, "scalar_one_or_none")
-    
-    # Make execute awaitable and return mock_result
-    db.execute.return_value = mock_result
-    make_mock_awaitable(db, "execute")
-    
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
     # Test function
-    user = await get_user_by_username(db, "nonexistent")
-    
+    user = await get_user_by_username(mock_db, "nonexistent")
+
     # Verify
     assert user is None
-    db.execute.assert_called_once()
+    mock_db.execute.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_get_user_by_id(db, mock_user):
+async def test_get_user_by_id(mock_db, mock_user):
     """Test get_user_by_id service function."""
-    # Mock DB get
-    db.get.return_value = mock_user
-    make_mock_awaitable(db, "get")
-    
+    mock_db.get = AsyncMock(return_value=mock_user)
+
     # Test function
-    user = await get_user_by_id(db, 1)
-    
+    user = await get_user_by_id(mock_db, 1)
+
     # Verify
     assert user == mock_user
-    db.get.assert_called_once_with(User, 1)
+    mock_db.get.assert_called_once_with(User, 1)
 
 
 @pytest.mark.asyncio
-async def test_get_user_by_id_not_found(db):
+async def test_get_user_by_id_not_found(mock_db):
     """Test get_user_by_id with nonexistent user."""
-    # Mock DB get
-    db.get.return_value = None
-    make_mock_awaitable(db, "get")
-    
+    mock_db.get = AsyncMock(return_value=None)
+
     # Test function
-    user = await get_user_by_id(db, 999)
-    
+    user = await get_user_by_id(mock_db, 999)
+
     # Verify
     assert user is None
-    db.get.assert_called_once_with(User, 999)
+    mock_db.get.assert_called_once_with(User, 999)
 
 
 @pytest.mark.asyncio
@@ -217,12 +195,13 @@ async def test_authenticate_user_nonexistent(db):
 
 
 @pytest.mark.asyncio
-async def test_create_user(db):
+async def test_create_user(mock_db):
     """Test create_user service function."""
     # Mock DB operations
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
-    
+    mock_db.add = MagicMock()
+    mock_db.commit = AsyncMock()
+    mock_db.refresh = AsyncMock()
+
     # Test data
     user_in = UserCreate(
         username="newuser",
@@ -232,13 +211,13 @@ async def test_create_user(db):
         is_superuser=False,
         user_type=UserType.WEB
     )
-    
+
     # Test function
     with patch("app.services.users.get_password_hash") as mock_get_hash:
         mock_get_hash.return_value = "hashed_password"
-        
-        user = await create_user(db, user_in)
-        
+
+        user = await create_user(mock_db, user_in)
+
         # Verify user creation
         assert user.username == "newuser"
         assert user.hashed_password == "hashed_password"
@@ -246,11 +225,11 @@ async def test_create_user(db):
         # Web users should always be superusers
         assert user.is_superuser is True
         assert user.user_type == UserType.WEB
-        
+
         # Verify DB operations
-        db.add.assert_called_once()
-        db.commit.assert_called_once()
-        db.refresh.assert_called_once()
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_called_once()
+        mock_db.refresh.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -273,7 +252,7 @@ async def test_create_user_api(db, mock_superuser):
             email="new@example.com",
             is_active=True,
             is_superuser=False,
-            user_type=UserType.BOT
+            user_type=UserType.CHAT
         )
         
         # Test function
@@ -299,7 +278,7 @@ async def test_create_user_username_exists(db, mock_superuser, mock_user):
             email="new@example.com",
             is_active=True,
             is_superuser=False,
-            user_type=UserType.BOT
+            user_type=UserType.CHAT
         )
         
         # Test function
@@ -312,53 +291,41 @@ async def test_create_user_username_exists(db, mock_superuser, mock_user):
 
 
 @pytest.mark.asyncio
-async def test_read_users(db, mock_superuser):
+async def test_read_users(mock_db, mock_superuser):
     """Test read_users API endpoint."""
     # Mock DB query result
     mock_result = MagicMock()
     mock_scalars = MagicMock()
     mock_scalars.all.return_value = [mock_superuser]
     mock_result.scalars.return_value = mock_scalars
-    
-    # Make scalars method awaitable
-    make_mock_awaitable(mock_result, "scalars")
-    
-    # Make execute awaitable and return mock_result
-    db.execute.return_value = mock_result
-    make_mock_awaitable(db, "execute")
-    
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
     # Test function
-    users = await read_users(db, mock_superuser)
-    
+    users = await read_users(mock_db, mock_superuser)
+
     # Verify
     assert len(users) == 1
     assert users[0] == mock_superuser
-    db.execute.assert_called_once()
+    mock_db.execute.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_read_users_with_filter(db, mock_superuser):
+async def test_read_users_with_filter(mock_db, mock_superuser):
     """Test read_users with user_type filter."""
     # Mock DB query result
     mock_result = MagicMock()
     mock_scalars = MagicMock()
     mock_scalars.all.return_value = [mock_superuser]
     mock_result.scalars.return_value = mock_scalars
-    
-    # Make scalars method awaitable
-    make_mock_awaitable(mock_result, "scalars")
-    
-    # Make execute awaitable and return mock_result
-    db.execute.return_value = mock_result
-    make_mock_awaitable(db, "execute")
-    
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
     # Test function
-    users = await read_users(db, mock_superuser, user_type=UserType.WEB)
-    
+    users = await read_users(mock_db, mock_superuser, user_type=UserType.WEB)
+
     # Verify
     assert len(users) == 1
     assert users[0] == mock_superuser
-    db.execute.assert_called_once()
+    mock_db.execute.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -426,34 +393,34 @@ async def test_read_user_not_found(db, mock_superuser):
 
 
 @pytest.mark.asyncio
-async def test_update_user(db, mock_user):
+async def test_update_user(mock_db, mock_user):
     """Test update_user service function."""
     # Mock DB operations
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
-    
+    mock_db.commit = AsyncMock()
+    mock_db.refresh = AsyncMock()
+
     # Test data
     user_update = UserUpdate(
         password="newpassword",
         email="updated@example.com",
         is_active=False
     )
-    
+
     # Test function
     with patch("app.services.users.get_password_hash") as mock_get_hash:
         mock_get_hash.return_value = "new_hashed_password"
-        
-        updated_user = await update_user(db, mock_user, user_update)
-        
+
+        updated_user = await update_user(mock_db, mock_user, user_update)
+
         # Verify user update
         assert updated_user == mock_user
         assert mock_user.hashed_password == "new_hashed_password"
         assert mock_user.email == "updated@example.com"
         assert mock_user.is_active is False
-        
+
         # Verify DB operations
-        db.commit.assert_called_once()
-        db.refresh.assert_called_once()
+        mock_db.commit.assert_called_once()
+        mock_db.refresh.assert_called_once()
 
 
 @pytest.mark.asyncio

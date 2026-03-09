@@ -9,7 +9,6 @@ from app.models.chat_users import ChatService, ChatUserRole
 from app.core.securityonion import SecurityOnionClient
 
 
-@pytest.fixture
 def await_mock(return_value):
     """Helper function to make mock return values awaitable in Python 3.13."""
     async def _awaitable():

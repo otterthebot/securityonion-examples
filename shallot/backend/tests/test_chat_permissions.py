@@ -48,18 +48,12 @@ async def test_get_chat_user_role(db: AsyncSession):
 async def test_get_chat_user_role_python_313(db: AsyncSession):
     """Test get_chat_user_role with Python 3.13 coroutine handling."""
     # Mock database query result
-    mock_scalar = MagicMock()
-    mock_scalar.scalar_one_or_none.return_value = await_mock(MagicMock(role=ChatUserRole.BASIC))
+    mock_user = MagicMock(role=ChatUserRole.BASIC)
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = mock_user
 
-    mock_scalar.scalar_one_or_none.return_value = await_mock(mock_scalar.scalar_one_or_none.return_value)
-
-    mock_scalar.scalar_one_or_none.return_value = await_mock(mock_scalar.scalar_one_or_none.return_value)  # Make awaitable for Python 3.13
-
-
-    mock_scalar.scalar_one_or_none.return_value = await_mock(mock_scalar.scalar_one_or_none.return_value)
-    
     # Mock db.execute
-    with patch.object(db, 'execute', return_value=await_mock(mock_scalar)):
+    with patch.object(db, 'execute', new=AsyncMock(return_value=mock_result)):
         role = await get_chat_user_role(db, "discord", "test123")
         assert role == ChatUserRole.BASIC
 
@@ -167,8 +161,8 @@ async def test_check_command_permission_exception_handling(db: AsyncSession):
 async def test_check_command_permission_has_permission_call(db: AsyncSession):
     """Test check_command_permission correctly calls has_permission."""
     # Mock get_chat_user_role and has_permission
-    with patch('app.services.chat_permissions.get_chat_user_role', return_value=await_mock(ChatUserRole.BASIC)) as mock_get_role, \
-         patch('app.services.chat_permissions.has_permission', return_value=await_mock(True)) as mock_has_permission:
+    with patch('app.services.chat_permissions.get_chat_user_role', new=AsyncMock(return_value=ChatUserRole.BASIC)) as mock_get_role, \
+         patch('app.services.chat_permissions.has_permission', return_value=True) as mock_has_permission:
         
         # Call check_command_permission
         allowed, _ = await check_command_permission(
