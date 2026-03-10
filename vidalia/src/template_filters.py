@@ -13,7 +13,8 @@ def nl2br(text: Optional[str]) -> str:
     """
     if not text:
         return ""
-    return Markup(text.replace('\n', '<br>\n'))
+    escaped = Markup.escape(text)
+    return Markup(escaped.replace('\n', Markup('<br>\n')))
 
 def format_timestamp(timestamp: Union[str, datetime, None]) -> str:
     """Format timestamp for display.

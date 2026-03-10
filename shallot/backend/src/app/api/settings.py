@@ -81,20 +81,11 @@ async def init_default_settings(db: AsyncSession):
         print(f"Traceback: {traceback.format_exc()}")
         raise
 
-# Add authentication requirement for all endpoints except initialization and basic settings fetch
-@router.get("/", response_model=List[Setting])
-async def read_settings(
-    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
-) -> Sequence[Setting]:
-    """Get all settings."""
-    return await get_settings(db, skip=skip, limit=limit)
-
-
-# Add auth requirement for all other endpoints
+# Add auth requirement for all endpoints
 router.dependencies.append(Depends(get_current_active_user))
 
 
-@router.get("/authenticated", response_model=List[Setting])
+@router.get("/", response_model=List[Setting])
 async def read_settings(
     skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ) -> Sequence[Setting]:

@@ -67,15 +67,20 @@ def test_nl2br():
     """Test newline to <br> conversion."""
     # Test basic newline conversion
     assert nl2br("line1\nline2") == "line1<br>\nline2"
-    
+
     # Test multiple newlines
     assert nl2br("line1\n\nline3") == "line1<br>\n<br>\nline3"
-    
+
     # Test with None
     assert nl2br(None) == ""
-    
+
     # Test empty string
     assert nl2br("") == ""
+
+    # Test that HTML is escaped to prevent XSS
+    result = nl2br("<script>alert(1)</script>\nline2")
+    assert "<script>" not in str(result)
+    assert "&lt;script&gt;" in str(result)
 
 def test_format_timestamp():
     """Test timestamp formatting."""

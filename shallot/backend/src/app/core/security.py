@@ -25,12 +25,10 @@ try:
     _cipher = Fernet(key.encode())
 except Exception as e:
     print(f"Error initializing Fernet cipher: {str(e)}")
-    print(f"Current encryption key: {settings.ENCRYPTION_KEY}")
-    
+
     # Generate a valid key for development/testing
     from cryptography.fernet import Fernet
     valid_key = Fernet.generate_key().decode()
-    print(f"Generated valid key for testing: {valid_key}")
     _cipher = Fernet(valid_key.encode())
 
 
