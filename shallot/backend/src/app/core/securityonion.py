@@ -241,13 +241,10 @@ class SecurityOnionClient:
                         timeout=10.0
                     )
                     print(f"Token response status: {response.status_code}")
-                    print(f"Token response headers: {dict(response.headers)}")
-                    
-                    # Log raw response details
+
+                    # Log response metadata (not content, which contains the token)
                     response_text = response.text
                     content_type = response.headers.get('content-type', '')
-                    print(f"Token response content (raw): '{response_text}'")
-                    print(f"Token response content length: {len(response_text)}")
                     print(f"Token response content type: {content_type}")
                     
                     if response.status_code == 200:
@@ -266,7 +263,6 @@ class SecurityOnionClient:
                                 expires_in = int(data["expires_in"]) - 300
                                 self._token_expires = datetime.utcnow() + timedelta(seconds=expires_in)
                                 print("Successfully obtained new token")
-                                print(f"[DEBUG] New token: {self._access_token}")
                                 return True
                             else:
                                 last_error = f"Unexpected response type ({content_type})"
@@ -306,7 +302,6 @@ class SecurityOnionClient:
             "Authorization": f"Bearer {self._access_token}",
             "Content-Type": "application/json"
         }
-        print(f"[DEBUG] Using headers: {headers}")
         return headers
 
     def get_status(self) -> Dict[str, Any]:

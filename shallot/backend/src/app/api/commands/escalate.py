@@ -225,8 +225,7 @@ async def process(command: str, platform: str, user_id: str, username: str, chan
                 so_client._access_token = None
                 if not await so_client._ensure_token():
                     return "Error: Failed to get access token for attaching event"
-                print(f"[DEBUG] Access token before attaching original event: {so_client._access_token}")
-                print(f"[DEBUG] Event payload before attaching original event: {event_payload}")
+                print("[DEBUG] Attaching original event to case")
                 add_event_response = await so_client.add_event_to_case(str(case["id"]), fields)
 
                 if not add_event_response:
@@ -306,8 +305,7 @@ async def process(command: str, platform: str, user_id: str, username: str, chan
                 so_client._access_token = None
                 if not await so_client._ensure_token():
                     return "Error: Failed to get access token for attaching related event"
-                print(f"[DEBUG] Access token before attaching related event: {so_client._access_token}")
-                print(f"[DEBUG] Event payload before attaching related event: {event_payload}")
+                print("[DEBUG] Attaching related event to case")
                 add_event_response = await so_client.add_event_to_case(str(case["id"]), fields)
 
                 if not add_event_response:

@@ -1,4 +1,10 @@
+import os
+import warnings
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEFAULT_ENCRYPTION_KEY = "dGhpc2lzYXZhbGlkZmVybmV0a2V5Zm9yZGV2ZWxvcG1lbnQ="
+_DEFAULT_SECRET_KEY = "default-jwt-secret"
 
 
 class Settings(BaseSettings):
@@ -9,12 +15,8 @@ class Settings(BaseSettings):
     """
 
     # Core settings
-    ENCRYPTION_KEY: str = (
-        "dGhpc2lzYXZhbGlkZmVybmV0a2V5Zm9yZGV2ZWxvcG1lbnQ="  # Valid Fernet key for development
-    )
-    SECRET_KEY: str = (
-        "default-jwt-secret"  # Default for development, should be overridden in production
-    )
+    ENCRYPTION_KEY: str = _DEFAULT_ENCRYPTION_KEY  # Override via env var in production
+    SECRET_KEY: str = _DEFAULT_SECRET_KEY  # Override via env var in production
 
     # Database settings
     DATABASE_URL: str = "sqlite+aiosqlite:///./data/app.db"  # Relative path for development/testing
@@ -31,3 +33,16 @@ class Settings(BaseSettings):
 
 # Create global settings instance
 settings = Settings()
+
+# Warn if insecure defaults are in use outside of testing
+if os.environ.get("TESTING") != "1":
+    if settings.SECRET_KEY == _DEFAULT_SECRET_KEY:
+        warnings.warn(
+            "Using default SECRET_KEY. Set the SECRET_KEY environment variable for production.",
+            stacklevel=1,
+        )
+    if settings.ENCRYPTION_KEY == _DEFAULT_ENCRYPTION_KEY:
+        warnings.warn(
+            "Using default ENCRYPTION_KEY. Set the ENCRYPTION_KEY environment variable for production.",
+            stacklevel=1,
+        )

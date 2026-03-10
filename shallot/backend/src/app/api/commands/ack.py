@@ -65,8 +65,6 @@ async def process(command: str, user_id: str = None, platform: ChatService = Non
         
         print("\n=== ACK REQUEST DEBUG INFO ===")
         print(f"URL: {full_url}")
-        print(f"Headers: {json.dumps(headers, indent=2)}")
-        print(f"Request Body: {json.dumps(ack_data, indent=2)}")
         
         response = await client._client.post(
             full_url,

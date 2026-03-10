@@ -62,8 +62,6 @@ async def _apply_suppression(base_url: str, headers: dict, rule_id: str, detecti
         print("\n=== DETECTION UPDATE REQUEST ===")
         print(f"URL: {base_url}connect/detection/")
         print(f"Request Method: PUT")
-        print(f"Headers: {json.dumps(headers, indent=2)}")
-        print(f"Request Body: {json.dumps(update_payload, indent=2)}")
         
         # Use the same verify setting as the main client
         verify = getattr(client._client, 'verify', False)
@@ -231,8 +229,6 @@ async def process(command: str, platform: str, user_id: str = None, username: st
             print("\n=== DETECTION UPDATE REQUEST ===")
             print(f"URL: {base_url}connect/detection/")
             print(f"Request Method: PUT")
-            print(f"Headers: {json.dumps(headers, indent=2)}")
-            print(f"Request Body: {json.dumps(update_payload, indent=2)}")
             
             # Use the base detection endpoint for updates
             update_url = f"{base_url}connect/detection/"

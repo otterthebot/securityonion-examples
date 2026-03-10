@@ -20,8 +20,8 @@ class Config:
         return cls._instance
     # Flask configuration values
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev')
-    DEBUG = True
-    TESTING = True
+    DEBUG = os.getenv('FLASK_DEBUG', 'false').lower() in ('true', '1', 'yes')
+    TESTING = os.getenv('FLASK_TESTING', 'false').lower() in ('true', '1', 'yes')
     
     # Logging configuration
     LOG_LEVEL = logging.DEBUG
@@ -40,13 +40,17 @@ class Config:
             
             # Flask configuration
             self.SECRET_KEY = os.getenv('SECRET_KEY', 'dev')
-            self.DEBUG = True
-            self.TESTING = True
+            self.DEBUG = os.getenv('FLASK_DEBUG', 'false').lower() in ('true', '1', 'yes')
+            self.TESTING = os.getenv('FLASK_TESTING', 'false').lower() in ('true', '1', 'yes')
             
             # Logging configuration
             self.LOG_LEVEL = logging.DEBUG
             self.PROPAGATE_EXCEPTIONS = True
             
+            # When running in test mode, enable TESTING flag
+            if os.getenv('FLASK_ENV') == 'testing':
+                self.TESTING = True
+
             # Security Onion API configuration
             # Force the API URL to mock-so-api in testing environment
             if os.getenv('FLASK_ENV') == 'testing':

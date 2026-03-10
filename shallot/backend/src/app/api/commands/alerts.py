@@ -54,7 +54,6 @@ async def process(command: str, user_id: str = None, platform: ChatService = Non
             try:
                 print(f"\nTrying endpoint: {base_url}{endpoint}")
                 headers = client._get_headers()
-                print(f"Request headers: {headers}")
                 
                 # Get current time for date range in UTC
                 now = datetime.utcnow()
