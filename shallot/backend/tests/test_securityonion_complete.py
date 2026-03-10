@@ -30,7 +30,7 @@ def mock_settings_db():
 @pytest.fixture
 def mock_token_response():
     """Fixture to create a mock token response."""
-    response_mock = AsyncMock(spec=httpx.Response)
+    response_mock = MagicMock(spec=httpx.Response)
     response_mock.status_code = 200
     response_mock.headers = {"content-type": "application/json"}
     response_mock.text = json.dumps({
@@ -49,7 +49,7 @@ def mock_token_response():
 @pytest.fixture
 def mock_health_response():
     """Fixture to create a mock health response."""
-    response_mock = AsyncMock(spec=httpx.Response)
+    response_mock = MagicMock(spec=httpx.Response)
     response_mock.status_code = 200
     response_mock.headers = {"content-type": "application/json"}
     response_mock.text = json.dumps({"status": "ok"})
@@ -67,14 +67,17 @@ def security_onion_client():
 async def test_initialization_success(mock_settings_db, mock_token_response, mock_health_response, security_onion_client):
     """Test successful initialization of the Security Onion client."""
     db_mock, settings_mock = mock_settings_db
-    
+
+    # Create a mock HTTP client with proper post/get responses
+    mock_http_client = AsyncMock()
+    mock_http_client.post = AsyncMock(return_value=mock_token_response)
+    mock_http_client.get = AsyncMock(return_value=mock_health_response)
+
     # Mock the database session
     with patch('app.database.AsyncSessionLocal', return_value=db_mock), \
-         patch('app.services.settings.get_setting', return_value=await_mock(settings_mock)), \
-         patch('httpx.AsyncClient.post', return_value=await_mock(mock_token_response)), \
-         patch('httpx.AsyncClient.get', return_value=await_mock(mock_health_response)), \
-         patch('app.core.securityonion.httpx.AsyncClient', return_value=AsyncMock()):
-        
+         patch('app.core.securityonion.get_setting', AsyncMock(return_value=settings_mock)), \
+         patch('app.core.securityonion.httpx.AsyncClient', return_value=mock_http_client):
+
         # Initialize the client
         await security_onion_client.initialize()
         
@@ -94,7 +97,7 @@ async def test_initialization_missing_settings(mock_settings_db, security_onion_
     
     # Mock the database session
     with patch('app.database.AsyncSessionLocal', return_value=db_mock), \
-         patch('app.services.settings.get_setting', return_value=await_mock(None)):
+         patch('app.core.securityonion.get_setting', AsyncMock(return_value=None)):
         
         # Initialize the client
         await security_onion_client.initialize()
@@ -112,7 +115,7 @@ async def test_initialization_invalid_settings_json(mock_settings_db, security_o
     
     # Mock the database session
     with patch('app.database.AsyncSessionLocal', return_value=db_mock), \
-         patch('app.services.settings.get_setting', return_value=await_mock(settings_mock)):
+         patch('app.core.securityonion.get_setting', AsyncMock(return_value=settings_mock)):
         
         # Initialize the client
         await security_onion_client.initialize()
@@ -133,7 +136,7 @@ async def test_initialization_missing_required_fields(mock_settings_db, security
     
     # Mock the database session
     with patch('app.database.AsyncSessionLocal', return_value=db_mock), \
-         patch('app.services.settings.get_setting', return_value=await_mock(settings_mock)):
+         patch('app.core.securityonion.get_setting', AsyncMock(return_value=settings_mock)):
         
         # Initialize the client
         await security_onion_client.initialize()
@@ -163,16 +166,19 @@ async def test_initialization_url_formatting(mock_settings_db, mock_token_respon
             "clientSecret": "test_client_secret"
         })
         
+        # Create a mock HTTP client with proper post/get responses
+        mock_http_client = AsyncMock()
+        mock_http_client.post = AsyncMock(return_value=mock_token_response)
+        mock_http_client.get = AsyncMock(return_value=mock_health_response)
+
         # Mock the database session
         with patch('app.database.AsyncSessionLocal', return_value=db_mock), \
-             patch('app.services.settings.get_setting', return_value=await_mock(settings_mock)), \
-             patch('httpx.AsyncClient.post', return_value=await_mock(mock_token_response)), \
-             patch('httpx.AsyncClient.get', return_value=await_mock(mock_health_response)), \
-             patch('app.core.securityonion.httpx.AsyncClient', return_value=AsyncMock()):
-            
+             patch('app.core.securityonion.get_setting', AsyncMock(return_value=settings_mock)), \
+             patch('app.core.securityonion.httpx.AsyncClient', return_value=mock_http_client):
+
             # Initialize the client
             await security_onion_client.initialize()
-            
+
             # Verify the URL is properly formatted
             assert security_onion_client._base_url.startswith("https://")
             assert security_onion_client._base_url.endswith("/")
@@ -186,7 +192,7 @@ async def test_initialization_exception(mock_settings_db, security_onion_client)
     
     # Mock the database session
     with patch('app.database.AsyncSessionLocal', return_value=db_mock), \
-         patch('app.services.settings.get_setting', side_effect=Exception("Test error")):
+         patch('app.core.securityonion.get_setting', side_effect=Exception("Test error")):
         
         # Initialize the client
         await security_onion_client.initialize()
@@ -207,16 +213,19 @@ async def test_initialization_http_protocol(mock_settings_db, mock_token_respons
         "verifySSL": False
     })
     
+    # Create a mock HTTP client with proper post/get responses
+    mock_http_client = AsyncMock()
+    mock_http_client.post = AsyncMock(return_value=mock_token_response)
+    mock_http_client.get = AsyncMock(return_value=mock_health_response)
+
     # Mock the database session
     with patch('app.database.AsyncSessionLocal', return_value=db_mock), \
-         patch('app.services.settings.get_setting', return_value=await_mock(settings_mock)), \
-         patch('httpx.AsyncClient.post', return_value=await_mock(mock_token_response)), \
-         patch('httpx.AsyncClient.get', return_value=await_mock(mock_health_response)), \
-         patch('app.core.securityonion.httpx.AsyncClient', return_value=AsyncMock()):
-        
+         patch('app.core.securityonion.get_setting', AsyncMock(return_value=settings_mock)), \
+         patch('app.core.securityonion.httpx.AsyncClient', return_value=mock_http_client):
+
         # Initialize the client
         await security_onion_client.initialize()
-        
+
         # Verify URL is kept as HTTP
         assert security_onion_client._base_url == "http://securityonion.example.com/"
         assert security_onion_client._verify_ssl is False
@@ -232,8 +241,8 @@ async def test_test_connection_success(mock_token_response, mock_health_response
     security_onion_client._client_secret = "test_client_secret"
     
     # Mock token and health responses
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(mock_token_response)), \
-         patch.object(security_onion_client._client, 'get', return_value=await_mock(mock_health_response)):
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=mock_token_response)), \
+         patch.object(security_onion_client._client, 'get', AsyncMock(return_value=mock_health_response)):
         
         # Test the connection
         result = await security_onion_client.test_connection()
@@ -268,7 +277,7 @@ async def test_test_connection_token_failure(security_onion_client):
     security_onion_client._client_secret = "test_client_secret"
     
     # Mock token failure
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(False)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=False)):
         
         # Test the connection
         result = await security_onion_client.test_connection()
@@ -288,23 +297,23 @@ async def test_test_connection_multiple_health_endpoints(mock_token_response, se
     security_onion_client._client_secret = "test_client_secret"
     
     # Create mock responses - first fails, second succeeds
-    error_response = AsyncMock(spec=httpx.Response)
+    error_response = MagicMock(spec=httpx.Response)
     error_response.status_code = 404
     error_response.headers = {"content-type": "application/json"}
     error_response.text = json.dumps({"error": "Not found"})
     error_response.json.return_value = {"error": "Not found"}
     
-    success_response = AsyncMock(spec=httpx.Response)
+    success_response = MagicMock(spec=httpx.Response)
     success_response.status_code = 200
     success_response.headers = {"content-type": "application/json"}
     success_response.text = json.dumps({"status": "ok"})
     success_response.json.return_value = {"status": "ok"}
     
     # Mock token success but first health endpoint fails, second succeeds
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(mock_token_response)), \
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=mock_token_response)), \
          patch.object(security_onion_client._client, 'get', side_effect=[
-             await_mock(error_response),  # First path fails
-             await_mock(success_response)  # Second path succeeds
+             error_response,
+             success_response
          ]):
         
         # Test the connection
@@ -325,15 +334,15 @@ async def test_test_connection_health_response_non_json(mock_token_response, sec
     security_onion_client._client_secret = "test_client_secret"
     
     # Create mock response with non-JSON content
-    text_response = AsyncMock(spec=httpx.Response)
+    text_response = MagicMock(spec=httpx.Response)
     text_response.status_code = 200
     text_response.headers = {"content-type": "text/plain"}
     text_response.text = "OK"
     text_response.json = MagicMock(side_effect=json.JSONDecodeError("Invalid JSON", "OK", 0))
     
     # Mock token success but health returns non-JSON
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(mock_token_response)), \
-         patch.object(security_onion_client._client, 'get', return_value=await_mock(text_response)):
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=mock_token_response)), \
+         patch.object(security_onion_client._client, 'get', AsyncMock(return_value=text_response)):
         
         # Test the connection
         result = await security_onion_client.test_connection()
@@ -353,23 +362,23 @@ async def test_test_connection_health_failure(mock_token_response, security_onio
     security_onion_client._client_secret = "test_client_secret"
     
     # Create mock failure response for both health endpoints
-    error_response1 = AsyncMock(spec=httpx.Response)
+    error_response1 = MagicMock(spec=httpx.Response)
     error_response1.status_code = 500
     error_response1.headers = {"content-type": "application/json"}
     error_response1.text = json.dumps({"detail": "Internal server error"})
     error_response1.json.return_value = {"detail": "Internal server error"}
     
-    error_response2 = AsyncMock(spec=httpx.Response)
+    error_response2 = MagicMock(spec=httpx.Response)
     error_response2.status_code = 500
     error_response2.headers = {"content-type": "application/json"}
     error_response2.text = json.dumps({"message": "Server error"})
     error_response2.json.return_value = {"message": "Server error"}
     
     # Mock token success but both health endpoints fail
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(mock_token_response)), \
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=mock_token_response)), \
          patch.object(security_onion_client._client, 'get', side_effect=[
-             await_mock(error_response1),
-             await_mock(error_response2)
+             error_response1,
+             error_response2
          ]):
         
         # Test the connection
@@ -391,7 +400,7 @@ async def test_test_connection_health_exception(mock_token_response, security_on
     security_onion_client._client_secret = "test_client_secret"
     
     # Mock token success but health exception for both endpoints
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(mock_token_response)), \
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=mock_token_response)), \
          patch.object(security_onion_client._client, 'get', side_effect=Exception("Connection error")):
         
         # Test the connection
@@ -429,7 +438,7 @@ async def test_ensure_token_expired_token(mock_token_response, security_onion_cl
     security_onion_client._token_expires = datetime.utcnow() - timedelta(hours=1)
     
     # Mock successful token request
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(mock_token_response)):
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=mock_token_response)):
         
         # Test ensure token
         result = await security_onion_client._ensure_token()
@@ -451,7 +460,7 @@ async def test_ensure_token_no_token(mock_token_response, security_onion_client)
     security_onion_client._token_expires = None
     
     # Mock successful token request
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(mock_token_response)):
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=mock_token_response)):
         
         # Test ensure token
         result = await security_onion_client._ensure_token()
@@ -473,7 +482,7 @@ async def test_ensure_token_different_paths(mock_token_response, security_onion_
     security_onion_client._token_expires = None
     
     # Create sequence of responses - first fails, second succeeds
-    error_response = AsyncMock(spec=httpx.Response)
+    error_response = MagicMock(spec=httpx.Response)
     error_response.status_code = 404
     error_response.headers = {"content-type": "application/json"}
     error_response.text = json.dumps({"detail": "Not found"})
@@ -481,8 +490,8 @@ async def test_ensure_token_different_paths(mock_token_response, security_onion_
     
     # Mock token requests - first fails, second succeeds
     with patch.object(security_onion_client._client, 'post', side_effect=[
-        await_mock(error_response),  # First path fails
-        await_mock(mock_token_response)  # Second path succeeds
+        error_response,
+        mock_token_response
     ]):
         
         # Test ensure token
@@ -505,26 +514,26 @@ async def test_ensure_token_missing_fields(security_onion_client):
     security_onion_client._token_expires = None
     
     # Create response missing access_token or expires_in
-    missing_token_response = AsyncMock(spec=httpx.Response)
+    missing_token_response = MagicMock(spec=httpx.Response)
     missing_token_response.status_code = 200
     missing_token_response.headers = {"content-type": "application/json"}
     missing_token_response.text = json.dumps({"token_type": "Bearer"})  # Missing access_token
     missing_token_response.json.return_value = {"token_type": "Bearer"}
     
-    missing_expires_response = AsyncMock(spec=httpx.Response)
+    missing_expires_response = MagicMock(spec=httpx.Response)
     missing_expires_response.status_code = 200
     missing_expires_response.headers = {"content-type": "application/json"}
     missing_expires_response.text = json.dumps({"access_token": "test_token"})  # Missing expires_in
     missing_expires_response.json.return_value = {"access_token": "test_token"}
     
     # Test with missing access_token
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(missing_token_response)):
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=missing_token_response)):
         result = await security_onion_client._ensure_token()
         assert result is False
         assert "Response missing access_token" in security_onion_client._last_error
     
     # Test with missing expires_in
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(missing_expires_response)):
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=missing_expires_response)):
         result = await security_onion_client._ensure_token()
         assert result is False
         assert "Response missing expires_in" in security_onion_client._last_error
@@ -542,14 +551,14 @@ async def test_ensure_token_non_json_response(security_onion_client):
     security_onion_client._token_expires = None
     
     # Create text response
-    text_response = AsyncMock(spec=httpx.Response)
+    text_response = MagicMock(spec=httpx.Response)
     text_response.status_code = 200
     text_response.headers = {"content-type": "text/plain"}
     text_response.text = "OK"
     text_response.json = MagicMock(side_effect=json.JSONDecodeError("Invalid JSON", "OK", 0))
     
     # Mock token request with non-JSON response
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(text_response)):
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=text_response)):
         result = await security_onion_client._ensure_token()
         assert result is False
         assert "Unexpected response type" in security_onion_client._last_error
@@ -567,14 +576,14 @@ async def test_ensure_token_failure(security_onion_client):
     security_onion_client._token_expires = None
     
     # Create error response for all token endpoints
-    error_response = AsyncMock(spec=httpx.Response)
+    error_response = MagicMock(spec=httpx.Response)
     error_response.status_code = 401
     error_response.headers = {"content-type": "application/json"}
     error_response.text = json.dumps({"detail": "Unauthorized"})
     error_response.json.return_value = {"detail": "Unauthorized"}
     
     # Mock token requests - all fail
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(error_response)):
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=error_response)):
         
         # Test ensure token
         result = await security_onion_client._ensure_token()
@@ -618,7 +627,7 @@ async def test_ensure_token_auth_encoding(security_onion_client, mock_token_resp
     security_onion_client._token_expires = None
     
     # Mock token request with success and capture headers
-    with patch.object(security_onion_client._client, 'post', return_value=await_mock(mock_token_response)) as mock_post:
+    with patch.object(security_onion_client._client, 'post', AsyncMock(return_value=mock_token_response)) as mock_post:
         # Test ensure token
         result = await security_onion_client._ensure_token()
         
@@ -668,11 +677,13 @@ def test_get_status(security_onion_client):
 
 def test_get_status_exception(security_onion_client):
     """Test get_status with exception."""
-    # Setup to trigger exception
-    security_onion_client._connected = "not a boolean"  # Will cause bool() to be called
-    security_onion_client._last_error = 123  # Will cause str() to be called
-    
-    # Get status with exception handling
+    class BadBool:
+        def __bool__(self):
+            raise RuntimeError("cannot convert to bool")
+
+    security_onion_client._connected = BadBool()
+    security_onion_client._last_error = "test"
+
     status = security_onion_client.get_status()
     assert status["connected"] is False
     assert "Status error:" in status["error"]
@@ -690,7 +701,7 @@ async def test_get_event(mock_token_response, security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock event response
-    event_response = AsyncMock(spec=httpx.Response)
+    event_response = MagicMock(spec=httpx.Response)
     event_response.status_code = 200
     event_response.json.return_value = {
         "events": [
@@ -703,8 +714,8 @@ async def test_get_event(mock_token_response, security_onion_client):
     }
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'get', return_value=await_mock(event_response)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'get', AsyncMock(return_value=event_response)):
         
         # Get event
         event = await security_onion_client.get_event("event123")
@@ -724,13 +735,13 @@ async def test_get_event_not_found(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock empty response
-    empty_response = AsyncMock(spec=httpx.Response)
+    empty_response = MagicMock(spec=httpx.Response)
     empty_response.status_code = 200
     empty_response.json.return_value = {"events": []}
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'get', return_value=await_mock(empty_response)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'get', AsyncMock(return_value=empty_response)):
         
         # Get event
         event = await security_onion_client.get_event("nonexistent")
@@ -746,7 +757,7 @@ async def test_get_event_token_failure(security_onion_client):
     security_onion_client._client = AsyncMock()
     
     # Mock token failure
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(False)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=False)):
         
         # Get event
         event = await security_onion_client.get_event("event123")
@@ -764,7 +775,7 @@ async def test_get_event_exception(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
          patch.object(security_onion_client._client, 'get', side_effect=Exception("API error")):
         
         # Get event
@@ -784,7 +795,7 @@ async def test_create_case(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock case response
-    case_response = AsyncMock(spec=httpx.Response)
+    case_response = MagicMock(spec=httpx.Response)
     case_response.status_code = 200
     case_response.json.return_value = {
         "id": "case123",
@@ -800,8 +811,8 @@ async def test_create_case(security_onion_client):
     }
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'post', return_value=await_mock(case_response)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'post', AsyncMock(return_value=case_response)):
         
         # Create case
         case = await security_onion_client.create_case(case_data)
@@ -832,7 +843,7 @@ async def test_create_case_token_failure(security_onion_client):
     }
     
     # Mock token failure
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(False)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=False)):
         
         # Create case
         case = await security_onion_client.create_case(case_data)
@@ -850,7 +861,7 @@ async def test_create_case_failure(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock error response
-    error_response = AsyncMock(spec=httpx.Response)
+    error_response = MagicMock(spec=httpx.Response)
     error_response.status_code = 400
     error_response.json.return_value = {"error": "Bad request"}
     
@@ -861,8 +872,8 @@ async def test_create_case_failure(security_onion_client):
     }
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'post', return_value=await_mock(error_response)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'post', AsyncMock(return_value=error_response)):
         
         # Create case
         case = await security_onion_client.create_case(case_data)
@@ -886,7 +897,7 @@ async def test_create_case_exception(security_onion_client):
     }
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
          patch.object(security_onion_client._client, 'post', side_effect=Exception("API error")):
         
         # Create case
@@ -906,7 +917,7 @@ async def test_search_events(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock search response
-    search_response = AsyncMock(spec=httpx.Response)
+    search_response = MagicMock(spec=httpx.Response)
     search_response.status_code = 200
     search_response.json.return_value = {
         "events": [
@@ -925,8 +936,8 @@ async def test_search_events(security_onion_client):
     }
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'get', return_value=await_mock(search_response)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'get', AsyncMock(return_value=search_response)):
         
         # Search events
         events = await security_onion_client.search_events("tags:alert")
@@ -952,13 +963,13 @@ async def test_search_events_custom_params(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock search response
-    search_response = AsyncMock(spec=httpx.Response)
+    search_response = MagicMock(spec=httpx.Response)
     search_response.status_code = 200
     search_response.json.return_value = {"events": []}
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'get', return_value=await_mock(search_response)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'get', AsyncMock(return_value=search_response)):
         
         # Search events with custom params
         await security_onion_client.search_events("source.ip:192.168.1.1", time_range="48h", limit=10)
@@ -976,7 +987,7 @@ async def test_search_events_token_failure(security_onion_client):
     security_onion_client._client = AsyncMock()
     
     # Mock token failure
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(False)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=False)):
         
         # Search events
         events = await security_onion_client.search_events("tags:alert")
@@ -994,13 +1005,13 @@ async def test_search_events_api_failure(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock error response
-    error_response = AsyncMock(spec=httpx.Response)
+    error_response = MagicMock(spec=httpx.Response)
     error_response.status_code = 500
     error_response.json.return_value = {"error": "Server error"}
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'get', return_value=await_mock(error_response)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'get', AsyncMock(return_value=error_response)):
         
         # Search events
         events = await security_onion_client.search_events("tags:alert")
@@ -1018,7 +1029,7 @@ async def test_search_events_exception(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
          patch.object(security_onion_client._client, 'get', side_effect=Exception("API error")):
         
         # Search events
@@ -1038,13 +1049,13 @@ async def test_search_events_date_format(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock search response
-    search_response = AsyncMock(spec=httpx.Response)
+    search_response = MagicMock(spec=httpx.Response)
     search_response.status_code = 200
     search_response.json.return_value = {"events": []}
     
     # Test date format for time range
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'get', return_value=await_mock(search_response)) as mock_get:
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'get', AsyncMock(return_value=search_response)) as mock_get:
         
         await security_onion_client.search_events("tags:alert")
         
@@ -1065,7 +1076,7 @@ async def test_add_event_to_case(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock success response
-    success_response = AsyncMock(spec=httpx.Response)
+    success_response = MagicMock(spec=httpx.Response)
     success_response.status_code = 200
     
     # Event fields
@@ -1076,8 +1087,8 @@ async def test_add_event_to_case(security_onion_client):
     }
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'post', return_value=await_mock(success_response)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'post', AsyncMock(return_value=success_response)):
         
         # Add event to case
         result = await security_onion_client.add_event_to_case("case123", event_fields)
@@ -1109,7 +1120,7 @@ async def test_add_event_to_case_token_failure(security_onion_client):
     }
     
     # Mock token failure
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(False)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=False)):
         
         # Add event to case
         result = await security_onion_client.add_event_to_case("case123", event_fields)
@@ -1127,7 +1138,7 @@ async def test_add_event_to_case_api_failure(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock error response
-    error_response = AsyncMock(spec=httpx.Response)
+    error_response = MagicMock(spec=httpx.Response)
     error_response.status_code = 400
     
     # Event fields
@@ -1137,8 +1148,8 @@ async def test_add_event_to_case_api_failure(security_onion_client):
     }
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'post', return_value=await_mock(error_response)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'post', AsyncMock(return_value=error_response)):
         
         # Add event to case
         result = await security_onion_client.add_event_to_case("case123", event_fields)
@@ -1156,7 +1167,7 @@ async def test_add_event_to_case_api_accepted(security_onion_client):
     security_onion_client._token_expires = datetime.utcnow() + timedelta(hours=1)
     
     # Create mock accepted response
-    accepted_response = AsyncMock(spec=httpx.Response)
+    accepted_response = MagicMock(spec=httpx.Response)
     accepted_response.status_code = 202
     
     # Event fields
@@ -1166,8 +1177,8 @@ async def test_add_event_to_case_api_accepted(security_onion_client):
     }
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
-         patch.object(security_onion_client._client, 'post', return_value=await_mock(accepted_response)):
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
+         patch.object(security_onion_client._client, 'post', AsyncMock(return_value=accepted_response)):
         
         # Add event to case
         result = await security_onion_client.add_event_to_case("case123", event_fields)
@@ -1191,7 +1202,7 @@ async def test_add_event_to_case_exception(security_onion_client):
     }
     
     # Mock client responses
-    with patch.object(security_onion_client, '_ensure_token', return_value=await_mock(True)), \
+    with patch.object(security_onion_client, '_ensure_token', AsyncMock(return_value=True)), \
          patch.object(security_onion_client._client, 'post', side_effect=Exception("API error")):
         
         # Add event to case

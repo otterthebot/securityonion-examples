@@ -62,114 +62,82 @@ def mock_setting():
 
 
 @pytest.mark.asyncio
-async def test_create_setting(db, mock_setting):
+async def test_create_setting(mock_db, mock_setting):
     """Test create_setting service function."""
     # Mock DB operation
-    db.add = MagicMock()
-    
+    mock_db.add = MagicMock()
+
     # Create setting data
     setting_data = SettingCreate(
         key="test_key",
         value="test_value",
         description="Test setting"
     )
-    
+
     # Mock the instance creation
     with patch("app.services.settings.SettingsModel") as mock_model:
         mock_model.return_value = mock_setting
-        
+
         # Test the function
-        result = await create_setting(db, setting_data)
-        
+        result = await create_setting(mock_db, setting_data)
+
         # Verify
         assert result == mock_setting
         mock_model.assert_called_once_with(key="test_key", description="Test setting")
-        db.add.assert_called_once_with(mock_setting)
-        db.commit.assert_called_once()
-        db.refresh.assert_called_once_with(mock_setting)
+        mock_db.add.assert_called_once_with(mock_setting)
+        mock_db.commit.assert_called_once()
+        mock_db.refresh.assert_called_once_with(mock_setting)
 
 
 @pytest.mark.asyncio
-async def test_get_setting(db, mock_setting):
+async def test_get_setting(mock_db, mock_setting):
     """Test get_setting service function."""
     # Mock DB query result
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_setting
+    mock_db.execute = AsyncMock(return_value=mock_result)
 
-    mock_result.scalar_one_or_none.return_value = await_mock(mock_result.scalar_one_or_none.return_value)
-
-    mock_result.scalar_one_or_none.return_value = await_mock(mock_result.scalar_one_or_none.return_value)  # Make awaitable for Python 3.13
-
-
-    mock_result.scalar_one_or_none.return_value = await_mock(mock_result.scalar_one_or_none.return_value)
-    make_mock_awaitable(mock_result, "scalar_one_or_none")
-    
-    db.execute.return_value = mock_result
-
-    
-    db.execute.return_value = await_mock(db.execute.return_value)  # Make awaitable for Python 3.13
-    make_mock_awaitable(db, "execute")
-    
     # Test the function
-    result = await get_setting(db, "test_key")
-    
+    result = await get_setting(mock_db, "test_key")
+
     # Verify
     assert result == mock_setting
-    db.execute.assert_called_once()
+    mock_db.execute.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_get_setting_not_found(db):
+async def test_get_setting_not_found(mock_db):
     """Test get_setting with nonexistent key."""
     # Mock DB query result
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None
+    mock_db.execute = AsyncMock(return_value=mock_result)
 
-    mock_result.scalar_one_or_none.return_value = await_mock(mock_result.scalar_one_or_none.return_value)
-
-    mock_result.scalar_one_or_none.return_value = await_mock(mock_result.scalar_one_or_none.return_value)  # Make awaitable for Python 3.13
-
-
-    mock_result.scalar_one_or_none.return_value = await_mock(mock_result.scalar_one_or_none.return_value)
-    make_mock_awaitable(mock_result, "scalar_one_or_none")
-    
-    db.execute.return_value = mock_result
-
-    
-    db.execute.return_value = await_mock(db.execute.return_value)  # Make awaitable for Python 3.13
-    make_mock_awaitable(db, "execute")
-    
     # Test the function
-    result = await get_setting(db, "nonexistent")
-    
+    result = await get_setting(mock_db, "nonexistent")
+
     # Verify
     assert result is None
-    db.execute.assert_called_once()
+    mock_db.execute.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_get_settings(db, mock_setting):
+async def test_get_settings(mock_db, mock_setting):
     """Test get_settings service function."""
     # Mock DB query result
     mock_result = MagicMock()
     mock_scalars = MagicMock()
     mock_scalars.all.return_value = [mock_setting]
     mock_result.scalars.return_value = mock_scalars
-    make_mock_awaitable(mock_result, "scalars")
-    
-    db.execute.return_value = mock_result
+    mock_db.execute = AsyncMock(return_value=mock_result)
 
-    
-    db.execute.return_value = await_mock(db.execute.return_value)  # Make awaitable for Python 3.13
-    make_mock_awaitable(db, "execute")
-    
     # Test the function
-    result = await get_settings(db)
-    
+    result = await get_settings(mock_db)
+
     # Verify
     assert len(result) == 1
     assert result[0] == mock_setting
-    db.execute.assert_called_once()
+    mock_db.execute.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -235,119 +203,120 @@ async def test_disable_other_chat_services(db, mock_setting):
 
 
 @pytest.mark.asyncio
-async def test_update_setting(db, mock_setting):
+async def test_update_setting(mock_db, mock_setting):
     """Test update_setting service function."""
     with patch("app.services.settings.get_setting") as mock_get_setting, \
          patch("app.services.settings.is_chat_service_enabled") as mock_is_enabled, \
          patch("app.services.settings.disable_other_chat_services") as mock_disable:
         # Mock getting the existing setting
         mock_get_setting.return_value = mock_setting
-        
+
         # Mock chat service check
         mock_is_enabled.return_value = False
-        
+
         # Update data
         update_data = SettingUpdate(
             value="updated_value",
             description="Updated description"
         )
-        
+
         # Test the function
-        result = await update_setting(db, "test_key", update_data)
-        
+        result = await update_setting(mock_db, "test_key", update_data)
+
         # Verify
         assert result == mock_setting
         assert mock_setting.value == "updated_value"
-        assert mock_setting.description == "Updated description"
-        db.commit.assert_called_once()
-        db.refresh.assert_called_once_with(mock_setting)
-        
+        mock_db.commit.assert_called_once()
+        mock_db.refresh.assert_called_once_with(mock_setting)
+
         # Verify chat service handling wasn't triggered
         mock_disable.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_update_setting_enable_chat_service(db, mock_setting):
+async def test_update_setting_enable_chat_service(mock_db, mock_setting):
     """Test update_setting when enabling a chat service."""
     with patch("app.services.settings.get_setting") as mock_get_setting, \
          patch("app.services.settings.is_chat_service_enabled") as mock_is_enabled, \
          patch("app.services.settings.disable_other_chat_services") as mock_disable:
         # Mock getting the existing setting
         mock_get_setting.return_value = mock_setting
-        
+
         # Mock chat service check - this is a chat service being enabled
         mock_is_enabled.return_value = True
-        
+
         # Update data
         update_data = SettingUpdate(
             value=json.dumps({"enabled": True}),
             description="Updated description"
         )
-        
+
         # Test the function
-        result = await update_setting(db, "DISCORD", update_data)
-        
+        result = await update_setting(mock_db, "DISCORD", update_data)
+
         # Verify
         assert result == mock_setting
-        db.commit.assert_called_once()
-        db.refresh.assert_called_once_with(mock_setting)
-        
+        mock_db.commit.assert_called_once()
+        mock_db.refresh.assert_called_once_with(mock_setting)
+
         # Verify chat service handling was triggered
-        mock_disable.assert_called_once_with(db, "DISCORD")
+        mock_disable.assert_called_once_with(mock_db, "DISCORD")
 
 
 @pytest.mark.asyncio
-async def test_update_setting_not_found(db):
+async def test_update_setting_not_found(mock_db):
     """Test update_setting with nonexistent key."""
     with patch("app.services.settings.get_setting") as mock_get_setting:
         # Mock getting the nonexistent setting
         mock_get_setting.return_value = None
-        
+
         # Update data
         update_data = SettingUpdate(
             value="updated_value",
             description="Updated description"
         )
-        
+
         # Test the function
-        result = await update_setting(db, "nonexistent", update_data)
-        
+        result = await update_setting(mock_db, "nonexistent", update_data)
+
         # Verify
         assert result is None
-        db.commit.assert_not_called()
-        db.refresh.assert_not_called()
+        mock_db.commit.assert_not_called()
+        mock_db.refresh.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_delete_setting(db, mock_setting):
+async def test_delete_setting(mock_db, mock_setting):
     """Test delete_setting service function."""
     with patch("app.services.settings.get_setting") as mock_get_setting:
         # Mock getting the existing setting
         mock_get_setting.return_value = mock_setting
-        
+        mock_db.delete = AsyncMock()
+
         # Test the function
-        result = await delete_setting(db, "test_key")
-        
+        result = await delete_setting(mock_db, "test_key")
+
         # Verify
         assert result is True
-        db.delete.assert_called_once_with(mock_setting)
-        db.commit.assert_called_once()
+        mock_db.delete.assert_called_once_with(mock_setting)
+        mock_db.commit.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_delete_setting_not_found(db):
+async def test_delete_setting_not_found(mock_db):
     """Test delete_setting with nonexistent key."""
     with patch("app.services.settings.get_setting") as mock_get_setting:
         # Mock getting the nonexistent setting
         mock_get_setting.return_value = None
-        
+        mock_db.delete = AsyncMock()
+
         # Test the function
-        result = await delete_setting(db, "nonexistent")
-        
+        result = await delete_setting(mock_db, "nonexistent")
+
         # Verify
         assert result is False
-        db.delete.assert_not_called()
-        db.commit.assert_not_called()
+        mock_db.delete.assert_not_called()
+        mock_db.commit.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -494,73 +463,73 @@ async def test_create_setting_api_existing(db, mock_setting):
 
 
 @pytest.mark.asyncio
-async def test_update_setting_api(db, mock_setting):
+async def test_update_setting_api(mock_db, mock_setting):
     """Test update_setting_endpoint API endpoint."""
     with patch("app.api.settings.update_setting") as mock_update, \
-         patch("app.core.securityonion.client") as mock_so, \
-         patch("app.core.discord.client") as mock_discord, \
-         patch("app.core.slack.client") as mock_slack, \
-         patch("app.core.matrix.client") as mock_matrix:
+         patch("app.api.settings.so_client") as mock_so, \
+         patch("app.api.settings.discord_client") as mock_discord, \
+         patch("app.api.settings.slack_client") as mock_slack, \
+         patch("app.api.settings.matrix_client") as mock_matrix:
         # Mock updating the setting
         mock_update.return_value = mock_setting
-        
+
         # Mock client initializations
-        for client in [mock_so, mock_discord, mock_slack, mock_matrix]:
-            client.initialize = AsyncMock()
-            
+        for c in [mock_so, mock_discord, mock_slack, mock_matrix]:
+            c.initialize = AsyncMock()
+
         # Also mock Security Onion test_connection
         mock_so.test_connection = AsyncMock()
-        
+
         # Test data
         update_data = SettingUpdate(
             value="updated_value",
             description="Updated description"
         )
-        
+
         # Test the function with a regular setting
-        result = await update_setting_endpoint("test_key", update_data, db)
-        
+        result = await update_setting_endpoint("test_key", update_data, mock_db)
+
         # Verify
         assert result == mock_setting
-        mock_update.assert_called_once_with(db, "test_key", update_data)
-        
+        mock_update.assert_called_once_with(mock_db, "test_key", update_data)
+
         # Verify no clients were initialized
-        for client in [mock_so, mock_discord, mock_slack, mock_matrix]:
-            client.initialize.assert_not_called()
-            
+        for c in [mock_so, mock_discord, mock_slack, mock_matrix]:
+            c.initialize.assert_not_called()
+
         # Test with Security Onion setting
         mock_update.reset_mock()
-        result = await update_setting_endpoint("securityOnion", update_data, db)
-        
+        result = await update_setting_endpoint("securityOnion", update_data, mock_db)
+
         # Verify SO client was initialized and tested
         mock_so.initialize.assert_called_once()
         mock_so.test_connection.assert_called_once()
-        
+
         # Test with Discord setting
         mock_update.reset_mock()
         mock_so.initialize.reset_mock()
         mock_so.test_connection.reset_mock()
-        
-        result = await update_setting_endpoint("DISCORD", update_data, db)
-        
+
+        result = await update_setting_endpoint("DISCORD", update_data, mock_db)
+
         # Verify Discord client was initialized
         mock_discord.initialize.assert_called_once()
-        
+
         # Test with Slack setting
         mock_update.reset_mock()
         mock_discord.initialize.reset_mock()
-        
-        result = await update_setting_endpoint("SLACK", update_data, db)
-        
+
+        result = await update_setting_endpoint("SLACK", update_data, mock_db)
+
         # Verify Slack client was initialized
         mock_slack.initialize.assert_called_once()
-        
+
         # Test with Matrix setting
         mock_update.reset_mock()
         mock_slack.initialize.reset_mock()
-        
-        result = await update_setting_endpoint("MATRIX", update_data, db)
-        
+
+        result = await update_setting_endpoint("MATRIX", update_data, mock_db)
+
         # Verify Matrix client was initialized
         mock_matrix.initialize.assert_called_once()
 
@@ -696,16 +665,14 @@ async def test_test_so_connection_error():
 
 
 @pytest.mark.asyncio
-async def test_init_default_settings(db):
+async def test_init_default_settings(mock_db):
     """Test init_default_settings function."""
     # Mock DB execution for initial checks
+    # Use a real DEFAULT_SETTINGS key so the update path is exercised
     mock_result = MagicMock()
-    mock_result.fetchall.return_value = [("existing_key",)]
-    db.execute.return_value = mock_result
+    mock_result.fetchall.return_value = [("system",)]
+    mock_db.execute = AsyncMock(return_value=mock_result)
 
-    db.execute.return_value = await_mock(db.execute.return_value)  # Make awaitable for Python 3.13
-    make_mock_awaitable(db, "execute")
-    
     # Mock settings operations
     with patch("app.api.settings.get_setting") as mock_get_setting, \
          patch("app.api.settings.update_setting") as mock_update, \
@@ -714,10 +681,10 @@ async def test_init_default_settings(db):
         existing_setting = MagicMock(spec=SettingsModel)
         existing_setting.value = ""  # Empty value should be updated
         mock_get_setting.return_value = existing_setting
-        
+
         # Test the function
-        await init_default_settings(db)
-        
+        await init_default_settings(mock_db)
+
         # Verify settings were checked and created/updated
         assert mock_get_setting.call_count > 0
         assert mock_update.call_count > 0

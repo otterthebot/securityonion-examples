@@ -24,12 +24,14 @@ try:
     # Try to initialize the Fernet cipher
     _cipher = Fernet(key.encode())
 except Exception as e:
-    print(f"Error initializing Fernet cipher: {str(e)}")
-
-    # Generate a valid key for development/testing
-    from cryptography.fernet import Fernet
-    valid_key = Fernet.generate_key().decode()
-    _cipher = Fernet(valid_key.encode())
+    import logging
+    _logger = logging.getLogger(__name__)
+    _logger.warning(
+        "ENCRYPTION_KEY is invalid or not set. Generating a temporary key. "
+        "Previously encrypted data will NOT be decryptable. "
+        "Set a valid 32-byte url-safe base64-encoded ENCRYPTION_KEY in production."
+    )
+    _cipher = Fernet(Fernet.generate_key())
 
 
 def encrypt_value(value: str) -> str:

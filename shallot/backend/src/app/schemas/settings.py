@@ -18,7 +18,7 @@ class SettingCreate(SettingBase):
 class SettingUpdate(SettingBase):
     """Schema for updating a setting."""
 
-    value: str = Field(..., description="New value to be encrypted")
+    value: Optional[str] = Field(None, description="New value to be encrypted")
 
 
 class Setting(SettingBase):

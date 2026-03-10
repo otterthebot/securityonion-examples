@@ -57,9 +57,12 @@ class SecurityOnionClient:
                     if not (api_url.startswith('http://') or api_url.startswith('https://')):
                         api_url = f"https://{api_url}"  # Default to https if no protocol specified
                     
-                    # Fix common URL issues
-                    while '//' in api_url[8:]:  # Look for double slashes after http(s)://
-                        api_url = api_url.replace('//', '/')
+                    # Fix common URL issues - only fix double slashes after the protocol
+                    protocol_end = api_url.index('://') + 3
+                    path_part = api_url[protocol_end:]
+                    while '//' in path_part:
+                        path_part = path_part.replace('//', '/')
+                    api_url = api_url[:protocol_end] + path_part
                     
                     # Ensure proper URL format
                     if not api_url.endswith('/'):

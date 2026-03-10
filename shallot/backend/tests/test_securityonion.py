@@ -58,7 +58,7 @@ def so_client():
 @pytest.mark.asyncio
 async def test_initialize_success(so_client, db, mock_so_settings, mock_httpx_client):
     """Test successful client initialization."""
-    with patch("app.core.securityonion.AsyncSessionLocal") as mock_session, \
+    with patch("app.database.AsyncSessionLocal") as mock_session, \
          patch("app.core.securityonion.get_setting") as mock_get_setting, \
          patch("app.core.securityonion.httpx.AsyncClient") as mock_client_class, \
          patch.object(SecurityOnionClient, "test_connection") as mock_test:
@@ -98,7 +98,7 @@ async def test_initialize_success(so_client, db, mock_so_settings, mock_httpx_cl
 @pytest.mark.asyncio
 async def test_initialize_missing_settings(so_client, db):
     """Test initialization with missing settings."""
-    with patch("app.core.securityonion.AsyncSessionLocal") as mock_session, \
+    with patch("app.database.AsyncSessionLocal") as mock_session, \
          patch("app.core.securityonion.get_setting") as mock_get_setting:
         # Mock session context manager
         mock_session.return_value.__aenter__.return_value = db
@@ -117,7 +117,7 @@ async def test_initialize_missing_settings(so_client, db):
 @pytest.mark.asyncio
 async def test_initialize_invalid_settings(so_client, db):
     """Test initialization with invalid settings JSON."""
-    with patch("app.core.securityonion.AsyncSessionLocal") as mock_session, \
+    with patch("app.database.AsyncSessionLocal") as mock_session, \
          patch("app.core.securityonion.get_setting") as mock_get_setting:
         # Mock session context manager
         mock_session.return_value.__aenter__.return_value = db
@@ -138,7 +138,7 @@ async def test_initialize_invalid_settings(so_client, db):
 @pytest.mark.asyncio
 async def test_initialize_missing_required_fields(so_client, db):
     """Test initialization with missing required settings fields."""
-    with patch("app.core.securityonion.AsyncSessionLocal") as mock_session, \
+    with patch("app.database.AsyncSessionLocal") as mock_session, \
          patch("app.core.securityonion.get_setting") as mock_get_setting:
         # Mock session context manager
         mock_session.return_value.__aenter__.return_value = db
@@ -164,7 +164,7 @@ async def test_initialize_missing_required_fields(so_client, db):
 @pytest.mark.asyncio
 async def test_initialize_url_formatting(so_client, db, mock_httpx_client):
     """Test URL formatting during initialization."""
-    with patch("app.core.securityonion.AsyncSessionLocal") as mock_session, \
+    with patch("app.database.AsyncSessionLocal") as mock_session, \
          patch("app.core.securityonion.get_setting") as mock_get_setting, \
          patch("app.core.securityonion.httpx.AsyncClient") as mock_client_class, \
          patch.object(SecurityOnionClient, "test_connection") as mock_test:
@@ -753,7 +753,7 @@ async def test_close(so_client, mock_httpx_client):
 @pytest.mark.asyncio
 async def test_initialize_exception_handling(so_client, db):
     """Test exception handling in the initialize method."""
-    with patch("app.core.securityonion.AsyncSessionLocal") as mock_session, \
+    with patch("app.database.AsyncSessionLocal") as mock_session, \
          patch("app.core.securityonion.get_setting") as mock_get_setting:
         # Mock session context manager
         mock_session.return_value.__aenter__.return_value = db
@@ -838,13 +838,14 @@ async def test_search_events_exception_handling(so_client, mock_httpx_client):
 
 def test_get_status_exception_handling(so_client):
     """Test exception handling in the get_status method."""
-    # Set up client to trigger exception
-    so_client._connected = "not-a-boolean"  # Will cause bool() to be called on a non-boolean
-    
-    # Get status
+    class BadBool:
+        def __bool__(self):
+            raise RuntimeError("cannot convert to bool")
+
+    so_client._connected = BadBool()
+
     status = so_client.get_status()
-    
-    # Verify error handling
+
     assert status["connected"] is False
     assert "Status error:" in status["error"]
 @pytest.mark.asyncio

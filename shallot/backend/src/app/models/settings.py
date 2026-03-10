@@ -16,6 +16,11 @@ class Settings(Base):
     description = Column(String, nullable=True)
     updated_at = Column(Integer, default=lambda: int(datetime.now().timestamp()), onupdate=lambda: int(datetime.now().timestamp()))
 
+    def __init__(self, **kwargs):
+        if 'updated_at' not in kwargs:
+            kwargs['updated_at'] = int(datetime.now().timestamp())
+        super().__init__(**kwargs)
+
     @property
     def value(self) -> str:
         """Get decrypted value."""

@@ -399,10 +399,9 @@ async def test_update_user(mock_db, mock_user):
     mock_db.commit = AsyncMock()
     mock_db.refresh = AsyncMock()
 
-    # Test data
+    # Test data - UserUpdate only has username, password, is_active, is_superuser, user_type
     user_update = UserUpdate(
         password="newpassword",
-        email="updated@example.com",
         is_active=False
     )
 
@@ -415,7 +414,6 @@ async def test_update_user(mock_db, mock_user):
         # Verify user update
         assert updated_user == mock_user
         assert mock_user.hashed_password == "new_hashed_password"
-        assert mock_user.email == "updated@example.com"
         assert mock_user.is_active is False
 
         # Verify DB operations

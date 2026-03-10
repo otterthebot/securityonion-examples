@@ -66,7 +66,8 @@ def format_severity(severity: Optional[str]) -> str:
     }
     
     badge_type = badge_map.get(severity, "secondary")
-    return f'<span class="badge badge-{badge_type}">{severity}</span>'
+    escaped_severity = Markup.escape(severity)
+    return Markup(f'<span class="badge badge-{badge_type}">{escaped_severity}</span>')
 
 def format_status(status: Optional[str]) -> str:
     """Format status as Bootstrap badge.
@@ -89,7 +90,8 @@ def format_status(status: Optional[str]) -> str:
     
     badge_type = badge_map.get(status, "secondary")
     display_status = status.replace("_", " ")
-    return f'<span class="badge badge-{badge_type}">{display_status}</span>'
+    escaped_status = Markup.escape(display_status)
+    return Markup(f'<span class="badge badge-{badge_type}">{escaped_status}</span>')
 
 def truncate_text(text: Optional[str], length: int = 50, suffix: str = "...") -> str:
     """Truncate text to specified length.

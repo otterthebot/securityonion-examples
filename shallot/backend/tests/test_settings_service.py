@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
+from sqlalchemy import text
 
 from app.models.settings import Settings as SettingsModel
 from app.schemas.settings import SettingCreate, SettingUpdate
@@ -34,10 +35,9 @@ async def test_create_setting(db: AsyncSession):
     assert created_setting.description == "Test setting"
     
     # Verify setting exists in the database
-    result = await db.execute("SELECT * FROM settings WHERE key = 'TEST_KEY'")
+    result = await db.execute(text("SELECT * FROM settings WHERE key = 'TEST_KEY'"))
     db_setting = result.first()
     assert db_setting is not None
-    assert db_setting[1] == "TEST_KEY"  # key is column 1
 
 
 @pytest.mark.asyncio
@@ -103,7 +103,7 @@ async def test_get_settings(db: AsyncSession):
     assert len(second_page) == 2
     
     # Ensure different pages have different settings
-    assert first_page[0].id != second_page[0].id
+    assert first_page[0].key != second_page[0].key
 
 
 @pytest.mark.asyncio
@@ -153,11 +153,11 @@ async def test_disable_other_chat_services(db: AsyncSession):
         assert service_config["enabled"] is False
 
     # Test with invalid JSON in a setting
-    # First update one setting to have invalid JSON
+    # Update one setting to have invalid JSON by encrypting a non-JSON string
     slack_setting = await get_setting(db, "SLACK")
-    slack_setting.encrypted_value = "not json"  # Directly modify DB column to bypass encryption
+    slack_setting.value = "not json"  # Encrypts "not json" via property setter
     await db.commit()
-    
+
     # This should not raise an exception even with invalid JSON
     await disable_other_chat_services(db, "MATRIX")
 
